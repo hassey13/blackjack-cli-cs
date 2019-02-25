@@ -8,6 +8,11 @@ namespace Blackjack
         public readonly List<Card> Cards = new List<Card>();
         private Player _player { get; set; }
 
+        public Hand(Player player)
+        {
+            _player = player;
+        }
+
         public void AddCard(Card card)
         {
             Cards.Add(card);
@@ -51,6 +56,11 @@ namespace Blackjack
             {
                 Logger.Write(card.GetCardDescription());
             }
+        }
+
+        public string GetPlayerName()
+        {
+            return _player.Name;
         }
     }
 }

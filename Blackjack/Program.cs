@@ -34,10 +34,14 @@ namespace Blackjack
             dealer.AssignTable(table);
 
             table.AddPlayer(player);
+            Logger.Write(player.Name + " sat down at the table to play.");
             dealer.IntroduceSelf();
 
             gameController.AddTable(table);
             gameController.StartGame();
+
+            Console.WriteLine("The End...");
+            Console.ReadLine();
         }
     }
 }

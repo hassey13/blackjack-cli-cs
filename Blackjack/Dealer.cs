@@ -8,6 +8,7 @@ namespace Blackjack
         public string Name { get; set; }
         public int SkillLevel { get; set; }
         public IGameRules GameMode { get; private set; }
+        public Player DealerPlayer = new Player("Dealer");
 
         private Table _table { get; set; }
 

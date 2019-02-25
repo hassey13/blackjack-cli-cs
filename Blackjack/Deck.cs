@@ -69,5 +69,12 @@ namespace Blackjack
             }
             
         }
+
+        public Card DrawCard()
+        {
+            var card = CardsInDeckList[0];
+            CardsInDeckList.RemoveAt(0);
+            return card;
+        }
     }
 }

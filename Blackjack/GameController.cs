@@ -32,6 +32,9 @@ namespace Blackjack
         public void PrintGameMenu()
         {
             Logger.Linebreak();
+            Logger.Write("Current players at table:");
+            GameTable.PrintPlayers();
+            Logger.Linebreak();
             Logger.Write("Main Menu");
             Logger.Write("Available options are:");
             Logger.Write("(1) Play a hand");
@@ -52,7 +55,7 @@ namespace Blackjack
             switch (input)
             {
                 case "1":
-                    HandleStartHand();
+                    HandleStartTurn();
                     break;
                 case "2":
                     HandleAddPlayer();
@@ -66,11 +69,11 @@ namespace Blackjack
             }
         }
 
-        public void HandleStartHand()
+        public void HandleStartTurn()
         {
             var dealer = GameTable.TableDealer;
             var players = GameTable.Players;
-            dealer.StartTurn(players);
+            GameTable.StartTurn();
         }
 
         public void HandleAddPlayer()

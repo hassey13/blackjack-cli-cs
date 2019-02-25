@@ -7,8 +7,14 @@ namespace Blackjack
     {
         public Dealer TableDealer { get; private set; }
         public IGameRules GameMode { get; set; }
+
         public Deck CardDeck { get; private set; }
+        public Deck CardDeckDiscardPile { get; private set; }
+
         public readonly List<Player> Players = new List<Player>();
+        public Player PlayerToSplitDeck { get; set; }
+
+        public readonly List<Turn> TurnHistory = new List<Turn>();
 
         public void AssignGameMode(IGameRules gameMode)
         {
@@ -32,6 +38,37 @@ namespace Blackjack
         public void AddPlayer(Player player)
         {
             Players.Add(player);
+        }
+
+        public void AddTurnToTurnHistory(Turn turn)
+        {
+            TurnHistory.Add(turn);
+        }
+
+        public void StartTurn()
+        {
+            Logger.Write("Starting Turn.");
+            var turn = new Turn()
+            {
+                TurnDealer = TableDealer,
+                TurnCardDeck = CardDeck,
+                TurnCardDeckDiscardPile = CardDeckDiscardPile
+            };
+            Logger.Write("Adding Players");
+            turn.AddPlayers(Players);
+            turn.Start();
+        }
+
+        public void PrintPlayers()
+        {
+            var PlayerCount = Players.Count;
+            var PlayerNames = new String[PlayerCount];
+            for (int i = 0; i < PlayerCount; i++)
+            {
+                var player = Players[i];
+                PlayerNames[i] = player.Name;
+            }
+            Logger.Write(String.Join(", ", PlayerNames));
         }
     }
 }
