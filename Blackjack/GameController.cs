@@ -15,7 +15,10 @@ namespace Blackjack
         public void StartGame()
         {
             IsGameRunning = true;
-            DisplayGameMenu();
+            while (IsGameRunning)
+            {
+                DisplayGameMenu();
+            }
         }
 
         public void StopGame()

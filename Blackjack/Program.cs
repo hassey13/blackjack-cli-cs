@@ -10,7 +10,7 @@ namespace Blackjack
 
             var gameController = new GameController();
             var dealerAgency = new DealerAgency();
-            var gameRules = new BlackJack();
+            var gameRules = new BlackJackRules();
 
             Logger.Write("Let\'s Play Blackjack!");
             Logger.Write("By: Eric Hasselbring");

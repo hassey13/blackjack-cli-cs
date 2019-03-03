@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Blackjack
 {
     public class Turn
     {
+        public IGameRules GameRules { get; set; }
         public Dealer TurnDealer { get; set; }
         public Deck TurnCardDeck { get; set; }
-        public Deck TurnCardDeckDiscardPile { get; set; }
+        public List<Card> TurnCardDeckDiscardPile { get; set; }
 
         public readonly List<Player> Players = new List<Player>();
         public readonly List<Hand> Hands = new List<Hand>();
@@ -25,15 +27,63 @@ namespace Blackjack
         // sends a message to all players to create hands/ bets
         // once all players mark ready dealer, set _arePlayersLocked
         // if new deck show and bury card assign shuffle split card
-        // starts dealing
-        // Check Dealer BJ
-        // if possible BJ with Ace showing offer insurance
-        // Check Players BJ
-        // Player Turns
-        // Payout and take cards back
-        // send cards to discard
+
+        // ./ starts dealing
+        // ./ Check Dealer BJ
+        // ./ if possible BJ with Ace showing offer insurance
+        // ./ Check Players BJ
+        // ./ Player Turns
+        // ./ Dealer Turn
+        // Payout
+        // ./ take cards back
+        // ./ send cards to discard
+        // Validate all states cleared
         // Check Deck for shuffle
-        // 
+        // ./ End Turn
+
+        public void Start()
+        {
+            _isStarted = true;
+            MessagePlayersToCreateHands();
+            CreateDealerHand();
+            DealHands();
+            if (GameRules.ShouldOfferInsurance(GetDealerHand()))
+            {
+                OfferEvenMoneyToPlayersWithBlackjackIfAvailable();
+                OfferInsuranceToPlayers();
+            }
+            if (GameRules.ShouldCheckDealerHandForBlackjack(GetDealerHand()))
+            {
+                Logger.Write("Dealer is checking for Blackjack.");
+                Thread.Sleep(1000);
+                if (!DoesDealerHaveBlackjack())
+                {
+                    Logger.Write("Dealer does not have Blackjack.");
+                    Logger.SkipLine();
+                }
+            }
+            if (DoesDealerHaveBlackjack())
+            {
+                Logger.Write("Dealer has Blackjack!");
+                Thread.Sleep(1500);
+                PayoutInsurance();
+                ClearHandsAndHandlePayouts();
+            }
+            else
+            {
+                HandleAnyPlayerBlackjacks();
+                PlayPlayerHands();
+                PlayDealerHand();
+                HandleAnyPayOuts();
+                ValidateAllActionsCarriedOut();
+            }
+            EndTurn();
+        }
+
+        public void EndTurn()
+        {
+            // Not sure what might go here
+        }
 
         public void AddPlayers(List<Player> players)
         {
@@ -47,24 +97,386 @@ namespace Blackjack
                 Players.Add(player);
                 Logger.Write("Added " + player.Name);
             }
-        }
-
-        public void Start()
-        {
-            _isStarted = true;
-            MessagePlayersToCreateHands();
-            CreateDealerHand();
-            DealHands();
+            Logger.SkipLine();
         }
 
         public int ReturnHandCountAvailable()
         {
-            return 1;
+            return 6;
         }
 
         public int ReturnMinHandCount()
         {
+            // TODO: implement
             return 1;
+        }
+
+        public void HandleAnyPayOuts()
+        {
+            var dealerHand = GetDealerHand();
+            var isLoopingThruPlayerHands = true;
+            var i = 0;
+            while (isLoopingThruPlayerHands)
+            {
+                var hand = Hands[i];
+                if (hand.IsDealerHand())
+                {
+                    isLoopingThruPlayerHands = false;
+                    break;
+                }
+                else
+                {
+                    if (hand.IsActive())
+                    {
+                        if (GameRules.DidHandBust(dealerHand) || (GameRules.CalcHandValue(hand) > GameRules.CalcHandValue(dealerHand)))
+                        {
+                            Logger.Write("You won! Congrats!");
+                        }
+                        else if (GameRules.CalcHandValue(hand) == GameRules.CalcHandValue(dealerHand))
+                        {
+                            Logger.Write("You drew!");
+                        }
+                        else
+                        {
+                            Logger.Write("You lost!");
+                        }
+                    }
+                    i += 1;
+                }
+            }
+        }
+
+        public void ValidateAllActionsCarriedOut()
+        {
+            // check hands for cards
+            // check no insurance unpaid
+            // check dealer has no cards
+        }
+
+        public bool IsAPlayerHandActive()
+        {
+            var isAHandActive = false;
+            var isLoopingThruPlayerHands = true;
+            var i = 0;
+            while (isLoopingThruPlayerHands)
+            {
+                var hand = Hands[i];
+                if (hand.IsDealerHand())
+                {
+                    isLoopingThruPlayerHands = false;
+                    break;
+                }
+                else
+                {
+                    if (hand.IsActive())
+                    {
+                        isAHandActive = true;
+                    }
+                    i += 1;
+                }
+            }
+            return isAHandActive;
+        }
+
+        public void PlayDealerHand()
+        {
+            var dealerHand = GetDealerHand();
+            Logger.Write("Dealer has:");
+            dealerHand.PrintHand();
+            if (IsAPlayerHandActive())
+            {
+                var continueLoop = true;
+                while (continueLoop)
+                {
+                    if (GameRules.ShouldDealerHit(dealerHand))
+                    {
+                        DealCardToHand(dealerHand, false);
+                        Thread.Sleep(1000); // Pause for effect
+                    }
+                    else
+                    {
+                        continueLoop = false;
+                        if (GameRules.DidHandBust(dealerHand))
+                        {
+                            Logger.Write("Dealer busted.");
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Logger.Write("Dealer does not play hand since no player hands still in play.");
+            }
+        }
+
+        public void OfferInsuranceToPlayers()
+        {
+            var isLoopingThruHand = true;
+            var i = 0;
+            while (isLoopingThruHand)
+            {
+                var hand = Hands[i];
+                if (hand.IsDealerHand())
+                {
+                    isLoopingThruHand = false;
+                    break;
+                }
+                else
+                {
+                    OfferPlayerWithHandInsurance(hand);
+                    i += 1;
+                }
+            }
+        }
+
+        public void OfferEvenMoneyToPlayersWithBlackjackIfAvailable()
+        {
+            var isLoopingThruHand = true;
+            var i = 0;
+            while (isLoopingThruHand)
+            {
+                var hand = Hands[i];
+                Logger.Write("Checking " + hand.GetPlayerName() + " for blackjack");
+                if (hand.IsDealerHand())
+                {
+                    isLoopingThruHand = false;
+                    break;
+                }
+                else
+                {
+                    if (hand.HasBlackjack())
+                    {
+                        OfferPlayerWithBlackjackEvenMoney(hand);
+                    }
+                    i += 1;
+                }
+            }
+            Logger.Write("Even money you, want? Even money you will eventually get when implemented...");
+        }
+
+        public void OfferPlayerWithBlackjackEvenMoney(Hand hand)
+        {
+            var message = hand.GetPlayerName() + " do you want even money?";
+            var didAcceptEvenMoney = Input.GetInputYN(message);
+            if (didAcceptEvenMoney)
+            {
+                Logger.Write(hand.GetPlayerName() + " chose even money.");
+                // TODO: Add payout
+                ClearHand(hand);
+            }
+            else
+            {
+                Logger.Write(hand.GetPlayerName() + " rejected even money.");
+            }
+        }
+
+        public void OfferPlayerWithHandInsurance(Hand hand)
+        {
+            // TODO: Implement
+            hand.PrintHand();
+            var message = hand.GetPlayerName() + " do you want insurance?";
+            var didAcceptEvenMoney = Input.GetInputYN(message);
+            if (didAcceptEvenMoney)
+            {
+                Logger.Write(hand.GetPlayerName() + " chose insurance.");
+            }
+            else
+            {
+                Logger.Write(hand.GetPlayerName() + " rejected insurance.");
+            }
+        }
+
+        public void PlayPlayerHands()
+        {
+            var isUnplayedPlayerHands = true;
+            var i = 0;
+            while (isUnplayedPlayerHands)
+            {
+                var hand = Hands[i];
+                Logger.Write("Playing hand for: " + hand.GetPlayerName());
+                if (hand.IsDealerHand())
+                {
+                    isUnplayedPlayerHands = false;
+                    break;
+                }
+                else
+                {
+                    if (hand.IsActive())
+                    {
+                        PlayHand(hand);
+                    }
+                    i += 1;
+                }
+            }
+        }
+
+        public void HandleAnyPlayerBlackjacks()
+        {
+            var isLoopingThruHands = true;
+            var i = 0;
+            while (isLoopingThruHands)
+            {
+                var hand = Hands[i];
+                if (hand.IsDealerHand())
+                {
+                    isLoopingThruHands = false;
+                    break;
+                }
+                else
+                {
+                    if (hand.HasBlackjack())
+                    {
+                        Logger.Write(hand.GetPlayerName() + " congrats you have Blackjack!");
+                        ClearHand(hand);
+                    }
+                    i += 1;
+                }
+            }
+        }
+
+        public void PlayHand(Hand hand)
+        {
+            PromptPlayerForHandAction(hand);
+        }
+
+        public void PromptPlayerForHandAction(Hand hand)
+        {
+            Logger.Write(hand.GetPlayerName() + " it is your turn.");
+            Logger.SkipLine();
+            Logger.Write("Dealer is showing:");
+            GetDealerHand().PrintDealerHand(true);
+            Logger.SkipLine();
+            Logger.Write(hand.GetPlayerName() + " has:");
+            hand.PrintHand();
+            Logger.Write("Hand value: " + GameRules.CalcHandValue(hand));
+            Logger.SkipLine();
+            Logger.Write("The following actions are available:");
+            PrintActionsListForHand(hand);
+            var playerActionInput = Input.GetInputString("Please select an action:");
+            HandlePlayerHandAction(hand, playerActionInput);
+        }
+
+        public void ClearHand(Hand hand)
+        {
+            var cards = hand.ClearAndReturnHand();
+            foreach (var card in cards)
+            {
+                TurnCardDeckDiscardPile.Add(card);
+            }
+        }
+
+        public void HandleActionHit(Hand hand)
+        {
+            Logger.Write(hand.GetPlayerName() + " chose to hit");
+            DealCardToHand(hand, false);
+            Logger.SkipLine();
+            if (GameRules.DidHandBust(hand))
+            {
+                Logger.Write(hand.GetPlayerName() + " busted.");
+                Logger.SkipLine();
+                // TODO: take bet
+                ClearHand(hand);
+            }
+            else if (GameRules.CalcHandValue(hand) == 21)
+            {
+                Logger.Write("Congrats! You got 21");
+            }
+            else
+            {
+                PromptPlayerForHandAction(hand);
+            }
+        }
+
+        public void HandleActionStand(Hand hand)
+        {
+            Logger.Write(hand.GetPlayerName() + " chose to stand");
+            Logger.SkipLine();
+        }
+
+        public void HandleActionSplit(Hand hand)
+        {
+            Logger.Write(hand.GetPlayerName() + " chose to split");
+            Logger.Write("This is not implemented so do something else.");
+            PromptPlayerForHandAction(hand);
+        }
+
+        public void HandleActionDoubleDown(Hand hand)
+        {
+            // TODO: check if has money to double, ask for bet amount cannot exceed original bet size
+            Logger.Write(hand.GetPlayerName() + " chose to double down");
+            DealCardToHand(hand, false);
+            if (GameRules.DidHandBust(hand))
+            {
+                Logger.Write(hand.GetPlayerName() + " busted.");
+                ClearHand(hand);
+            }
+            else if (GameRules.CalcHandValue(hand) == 21)
+            {
+                Logger.Write("Congrats! You got 21");
+            }
+            Logger.SkipLine();
+        }
+
+        public void HandleActionSurrenderHand(Hand hand)
+        {
+            Logger.Write(hand.GetPlayerName() + " chose to surrender their hand");
+            // TODO: take half bet and give half back
+            ClearHand(hand);
+        }
+
+        public void HandleActionAskForAdvice(Hand hand)
+        {
+            Logger.Write(hand.GetPlayerName() + " is looking for advice on how to play this hand.");
+            Logger.Write(TurnDealer.Name + " says \"" + hand.GetPlayerName() + ", you should " +  TurnDealer.GiveAdviceOnHand(hand) + ".\" ");
+        }
+
+        public void HandlePlayerHandAction(Hand hand, string action)
+        {
+            switch (action.ToLower())
+            {
+                case "hit":
+                    HandleActionHit(hand);
+                    break;
+                case "stand":
+                    HandleActionStand(hand);
+                    break;
+                case "split":
+                    HandleActionSplit(hand);
+                    break;
+                case "double down":
+                    HandleActionDoubleDown(hand);
+                    break;
+                case "surrender":
+                    HandleActionSurrenderHand(hand);
+                    break;
+                case "ask advice":
+                    HandleActionAskForAdvice(hand);
+                    break;
+                default:
+                    PromptPlayerForHandAction(hand);
+                    break;
+            }
+        }
+
+        public void PrintActionsListForHand(Hand hand)
+        {
+            Logger.Write("Hit");
+            Logger.Write("Stand");
+            if (hand.IsDoubleDownAvailable())
+            {
+                Logger.Write("Double Down");
+            }
+            if (hand.IsSplitAvailable())
+            {
+                Logger.Write("Split");
+
+            }
+            if (hand.IsSurrenderHandAvailable())
+            {
+                Logger.Write("Surrender Hand (Receive half of wager back)");
+            }
+            Logger.Write("Ask Advice");
+
         }
 
         public void MessagePlayersToCreateHands()
@@ -98,13 +510,23 @@ namespace Blackjack
             var hand = new Hand(player);
             Logger.Write("Hand created for " + player.Name);
             Hands.Add(hand);
+            Logger.Linebreak();
         }
 
-        public void DealCardToHand(Hand hand)
+        public void DealCardToHand(Hand hand, bool shouldHideDealerCard)
         {
             var card = TurnCardDeck.DrawCard();
             hand.AddCard(card);
-            Logger.Write("Dealing " + card.GetCardDescription() + " to " + hand.GetPlayerName());
+            if (shouldHideDealerCard && hand.GetPlayerName() == "Dealer")
+            {
+                Logger.Write("Dealing " + "card" + " to " + hand.GetPlayerName());
+                Thread.Sleep(500);
+            }
+            else
+            {
+                Logger.Write("Dealing " + card.GetCardDescription() + " to " + hand.GetPlayerName());
+                Thread.Sleep(500);
+            }
         }
 
         public void DealHands()
@@ -113,13 +535,68 @@ namespace Blackjack
             for (int i = 0; i < handsCount; i++)
             {
                 var hand = Hands[i];
-                DealCardToHand(hand);
+                DealCardToHand(hand, false);
             }
             for (int i = 0; i < handsCount; i++)
             {
                 var hand = Hands[i];
-                DealCardToHand(hand);
+                DealCardToHand(hand, true);
             }
+            Logger.Linebreak();
+        }
+
+        public void ClearHandsAndHandlePayouts()
+        {
+            var isLoopingThruPlayerHands = true;
+            var i = 0;
+            while (isLoopingThruPlayerHands)
+            {
+                var hand = Hands[i];
+                if (hand.IsDealerHand())
+                {
+                    isLoopingThruPlayerHands = false;
+                    ClearHand(hand);
+                    break;
+                }
+                else
+                {
+                    if (hand.IsActive())
+                    {
+                        ClearHand(hand);
+                    }
+                    i += 1;
+                }
+            }
+        }
+
+        public void PayoutInsurance()
+        {
+            // Implement
+            Logger.Write("Should have gotten that insurance...");
+        }
+
+        public bool DoesDealerHaveBlackjack()
+        {
+            return GetDealerHand().HasBlackjack();
+        }
+
+        public bool ShouldOfferInsurance()
+        {
+            var hand = GetDealerHand();
+            var visibleDealerCard = hand.Cards[0];
+            return visibleDealerCard.IsAce();
+        }
+
+        public Hand GetDealerHand()
+        {
+            // TODO: vague assumption
+            return Hands[Hands.Count - 1];
+        }
+
+        public void PrintDealerHand()
+        {
+            Logger.Write("Dealer has: ");
+            GetDealerHand().PrintHand();
         }
 
     }

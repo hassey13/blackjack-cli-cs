@@ -3,6 +3,10 @@
     public interface IGameRules
     {
         int ReturnDeckCount();
-        int ReturnHandValue(Hand hand);
+        int CalcHandValue(Hand hand);
+        bool ShouldDealerHit(Hand hand);
+        bool DidHandBust(Hand hand);
+        bool ShouldOfferInsurance(Hand hand);
+        bool ShouldCheckDealerHandForBlackjack(Hand hand);
     }
 }

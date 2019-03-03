@@ -9,7 +9,7 @@ namespace Blackjack
         public IGameRules GameMode { get; set; }
 
         public Deck CardDeck { get; private set; }
-        public Deck CardDeckDiscardPile { get; private set; }
+        public List<Card> CardDeckDiscardPile = new List<Card>();
 
         public readonly List<Player> Players = new List<Player>();
         public Player PlayerToSplitDeck { get; set; }
@@ -50,6 +50,7 @@ namespace Blackjack
             Logger.Write("Starting Turn.");
             var turn = new Turn()
             {
+                GameRules = GameMode,
                 TurnDealer = TableDealer,
                 TurnCardDeck = CardDeck,
                 TurnCardDeckDiscardPile = CardDeckDiscardPile

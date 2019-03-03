@@ -27,14 +27,11 @@ namespace Blackjack
             Logger.Write(Name + " says, \"Hello Everyone, I will be your dealer today. Best of luck!\"");
         }
 
-        public void StartTurn(List<Player> players)
+        public string GiveAdviceOnHand(Hand hand)
         {
-            DealOpenningBlackJackHand(players);
+            // TODO: implement
+            return "hit (not implemented)";
         }
 
-        public void DealOpenningBlackJackHand(List<Player> players)
-        {
-
-        }
     }
 }

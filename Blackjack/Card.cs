@@ -14,7 +14,7 @@
         public string GetCardDescription()
         {
             var prefix = UseAn() ? "an " : "a ";
-            return prefix + this._cardType.ToString() + " of " + this.GetCardSuitIcon() + " " + this._cardSuit.ToString();
+            return prefix + _cardType.ToString() + " of " + GetCardSuitIcon() + " " + _cardSuit.ToString();
         }
 
         public string GetCardSuitIcon()
@@ -39,6 +39,27 @@
                     throw new ArgumentException("A valid suit enum must be supplied.");
             }
             return icon;
+        }
+
+        public string GetCardType()
+        {
+            return _cardType.ToString();
+        }
+
+        public int GetValue()
+        {
+            return CardValueDictionary.GetValue(_cardType.ToString());
+        }
+
+        public bool IsAce()
+        {
+            return _cardType.ToString() == "Ace";
+        }
+
+        public bool IsTenJQK()
+        {
+            // TODO: refactor to array and check if it contains _cardType
+            return _cardType.ToString() == "Ten" || _cardType.ToString() == "Jack" || _cardType.ToString() == "Queen" || _cardType.ToString() == "King";
         }
 
         private bool UseAn()
