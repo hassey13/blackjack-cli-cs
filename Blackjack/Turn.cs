@@ -65,6 +65,7 @@ namespace Blackjack
             if (DoesDealerHaveBlackjack())
             {
                 Logger.Write("Dealer has Blackjack!");
+                GetDealerHand().PrintDealerHand(false);
                 Thread.Sleep(1500);
                 PayoutInsurance();
                 ClearHandsAndHandlePayouts();
@@ -236,7 +237,6 @@ namespace Blackjack
             while (isLoopingThruHand)
             {
                 var hand = Hands[i];
-                Logger.Write("Checking " + hand.GetPlayerName() + " for blackjack");
                 if (hand.IsDealerHand())
                 {
                     isLoopingThruHand = false;
@@ -251,7 +251,7 @@ namespace Blackjack
                     i += 1;
                 }
             }
-            Logger.Write("Even money you, want? Even money you will eventually get when implemented...");
+            Logger.SkipLine();
         }
 
         public void OfferPlayerWithBlackjackEvenMoney(Hand hand)
@@ -301,7 +301,7 @@ namespace Blackjack
                 }
                 else
                 {
-                    if (hand.IsActive())
+                    if (hand.IsActive() && !GameRules.SkipPlayOfHand(hand))
                     {
                         PlayHand(hand);
                     }
@@ -393,11 +393,51 @@ namespace Blackjack
             Logger.SkipLine();
         }
 
+        public int GetIndexOfHand(Hand hand)
+        {
+            var handIndex = -1;
+            var loopIndex = 0;
+            while (handIndex == -1 || loopIndex < Hands.Count)
+            {
+                var iterationHand = Hands[loopIndex];
+                if (hand == iterationHand)
+                {
+                    handIndex = loopIndex;
+                }
+                loopIndex += 1;
+            }
+            if (handIndex == -1)
+            {
+                throw new Exception("Could not find hand to determine index.");
+            }
+            return handIndex;
+        }
+
         public void HandleActionSplit(Hand hand)
         {
+            // TODO: check if has enough money to split
+            var splitCard = hand.RemoveAndReturnLastCard();
+            var newHand = new Hand(hand.GetPlayer())
+            {
+                isSplitHand = true
+            };
+            newHand.AddCard(splitCard);
+            var indexForNewHand = GetIndexOfHand(hand) + 1;
+            Hands.Insert(indexForNewHand, newHand);
             Logger.Write(hand.GetPlayerName() + " chose to split");
-            Logger.Write("This is not implemented so do something else.");
-            PromptPlayerForHandAction(hand);
+            DealCardToHand(hand, false);
+            if (splitCard.IsAce())
+            {
+                DealCardToHand(newHand, false);
+                Logger.SkipLine();
+                Logger.Write(hand.GetPlayerName() + " now has two hands with:");
+                hand.PrintHand();
+                newHand.PrintHand();
+            }
+            else
+            {
+                PromptPlayerForHandAction(hand);
+            }
         }
 
         public void HandleActionDoubleDown(Hand hand)
@@ -441,7 +481,14 @@ namespace Blackjack
                     HandleActionStand(hand);
                     break;
                 case "split":
-                    HandleActionSplit(hand);
+                    if (GameRules.SplitHandAvailable(hand))
+                    {
+                        HandleActionSplit(hand);
+                    }
+                    else
+                    {
+                        PromptPlayerForHandAction(hand);
+                    }
                     break;
                 case "double down":
                     HandleActionDoubleDown(hand);
@@ -466,10 +513,9 @@ namespace Blackjack
             {
                 Logger.Write("Double Down");
             }
-            if (hand.IsSplitAvailable())
+            if (GameRules.SplitHandAvailable(hand))
             {
                 Logger.Write("Split");
-
             }
             if (hand.IsSurrenderHandAvailable())
             {
@@ -483,7 +529,8 @@ namespace Blackjack
         {
             foreach (var player in Players)
             {
-                Logger.Write(player.Name + ", how many hands will you be playing? (" + (ReturnHandCountAvailable()).ToString() + " hand availble)");
+                var countHandsAvailable = ReturnHandCountAvailable();
+                Logger.Write(player.Name + ", how many hands will you be playing? (" + countHandsAvailable.ToString() + " " + Helpers.DeterminePlurality(countHandsAvailable, "hand") + "availble)");
                 PromptPlayerToCreateHands(player);
             }
         }

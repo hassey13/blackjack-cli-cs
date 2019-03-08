@@ -7,6 +7,7 @@ namespace Blackjack
     {
         public readonly List<Card> Cards = new List<Card>();
         private Player _player { get; set; }
+        public bool isSplitHand { get; set; }
 
         public Hand(Player player)
         {
@@ -92,6 +93,11 @@ namespace Blackjack
             return _player.Name;
         }
 
+        public Player GetPlayer()
+        {
+            return _player;
+        }
+
         public bool HasBlackjack()
         {
             if (Cards.Count != 2)
@@ -104,11 +110,6 @@ namespace Blackjack
         public bool IsDoubleDownAvailable()
         {
             return !HasUserPlayedAction();
-        }
-
-        public bool IsSplitAvailable()
-        {
-            return !HasUserPlayedAction() && Cards[0].GetCardType() == Cards[1].GetCardType();
         }
 
         public bool IsSurrenderHandAvailable()

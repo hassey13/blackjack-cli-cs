@@ -10,6 +10,11 @@ namespace Blackjack
             return 1;
         }
 
+        public int CalcCardValue(Card card)
+        {
+            return card.GetValue();
+        }
+
         public int CalcHandValue(Hand hand)
         {
             var cards = hand.Cards;
@@ -131,6 +136,22 @@ namespace Blackjack
                 }
             }
             return couldHaveBlackjack;
+        }
+
+        public bool SkipPlayOfHand(Hand hand)
+        {
+            if (hand.isSplitHand && hand.Cards[0].IsAce())
+            {
+                Logger.Write("Skipping play of split hand because you cannot play a hand of split Aces");
+                return true;
+            }
+            return false;
+        }
+
+        public bool SplitHandAvailable(Hand hand)
+        {
+            var cards = hand.Cards;
+            return !hand.HasUserPlayedAction() && CalcCardValue(cards[0]) == CalcCardValue(cards[1]);
         }
     }
 }

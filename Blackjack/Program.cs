@@ -17,11 +17,13 @@ namespace Blackjack
             Logger.Linebreak();
 
             var firstTimePlayingMessage = "First Time Playing? (Yes/No)";
-            var isFirstTime = Input.GetInputYN(firstTimePlayingMessage);
+            // var isFirstTime = Input.GetInputYN(firstTimePlayingMessage);
+            var isFirstTime = true;
             Logger.Write("Great! " + (isFirstTime ? "You are going to have so much fun!" : "Welcome back!"));
 
             var getNameMessage = "What is your name?";
-            var userInputName = Input.GetInputString(getNameMessage);
+            // var userInputName = Input.GetInputString(getNameMessage);
+            var userInputName = "Eric";
             Logger.Write("Hi " + userInputName + "! Thanks for playing!");
             var user = User.Create(userInputName);
             var player = new Player(user.Name);
